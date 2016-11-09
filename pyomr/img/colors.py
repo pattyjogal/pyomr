@@ -4,6 +4,7 @@ This sub-module provides image coloration functions
 import cv2
 import numpy
 
+from pyomr.img.core import _
 
 def grayscale(src):
 
@@ -14,19 +15,16 @@ def grayscale(src):
     :returns: Grayscale version of src image
     :rtype: numpy.ndarray
     """
-    img = None
-
-    if type(src) is str:
-        img = cv2.imread(src, cv2.IMREAD_UNCHANGED)
-    elif type(src) is numpy.ndarray:
-        img = src
-    else:
-        raise TypeError
     # If the file is not found, raise a FileNotFoundError
+
+    img = _(src, cv2.IMREAD_UNCHANGED)
+
     if not img.data:
         raise FileNotFoundError
 
-    if img.shape[2] == 3:
+    if len(img.shape) < 3:
+        gray = img
+    elif img.shape[2] == 3:
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     else:
         gray = img
@@ -41,11 +39,9 @@ def binary_img(img):
     :returns: Binary version of image
     :rtype: numpy.ndarray
     """
-    return cv2.adaptiveThreshold(
+    return cv2.threshold(
         img,
+        240,
         255,
-        cv2.ADAPTIVE_THRESH_MEAN_C,
-        cv2.THRESH_BINARY,
-        15,
-        -2
-    )
+        cv2.THRESH_BINARY+cv2.THRESH_OTSU
+    )[1]

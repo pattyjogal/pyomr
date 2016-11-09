@@ -3,6 +3,7 @@ import os
 import logging
 
 from pyomr.shape.shape import *
+from pyomr.img.filters import *
 
 dir = os.path.dirname(__file__)
 print(dir)
@@ -21,9 +22,20 @@ def test_image_components(message, src):
     cv2.waitKey(3000)
     cv2.destroyWindow('vert')
 
+def test_filtered_image_components(message, src):
+    logging.info('Testing a ' + message)
+    cv2.imshow('src', histo_equal(src))
+    cv2.waitKey(3000)
+    cv2.destroyWindow('src')
+    cv2.imshow('horiz', get_shapes_from_barline(histo_equal(src))[0])
+    cv2.waitKey(3000)
+    cv2.destroyWindow('horiz')
+    cv2.imshow('vert', get_shapes_from_barline(histo_equal(src))[1])
+    cv2.waitKey(3000)
+    cv2.destroyWindow('vert')
+
 test_image_components('stock image', stock_img)
 test_image_components('good quality camera image', good_q_camera)
-
-
-
+test_filtered_image_components('stock image', stock_img)
+test_filtered_image_components('good quality camera image', good_q_camera)
 
