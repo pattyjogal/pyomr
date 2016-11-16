@@ -1,4 +1,4 @@
-import cv2
+import cv2, numpy
 import os
 import logging
 
@@ -34,8 +34,45 @@ def test_filtered_image_components(message, src):
     cv2.waitKey(3000)
     cv2.destroyWindow('vert')
 
+def test_recognition(lily_notes):
+    import subprocess
+    from PIL import Image
+
+    lily_string = '{\n'
+
+    for note in lily_notes:
+        lily_string += note + ' '
+
+    lily_string += '\n}'
+    bytes(lily_string, 'utf8')
+    with open('current_sheet_test.ly', 'w') as f:
+        f.write(lily_string)
+        path = f.name
+        f.close()
+
+    command = ('lilypond', '-fpng', '-dpreview', path)
+    process = subprocess.Popen(command,
+                               stdout=subprocess.PIPE,
+                               stdin=subprocess.PIPE,
+                               shell=True,
+                               env={'PATH':
+                                    'C:\\Program Files (x86)\\LilyPond\\usr\\bin'})
+
+    (out, err) = process.communicate()
+    import os
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    img_path = dir_path + '\\' + path[:-2] + 'preview.png'
+
+    test_image_components('generated image', img_path)
+
+
+test_recognition(["b'", "c'", "a'", "g'"])
+test_recognition(["b'", "c'", "a'", "g'", "e'", "c''", "a'"])
+test_recognition(["b'", "c'", "a'", "g'", "e'", "c''", "a'"] + ["b'", "c'", "a'", "g'", "e'", "c''", "a'"] + ["b'", "c'", "a'", "g'", "e'", "c''", "a'"])
+
 test_image_components('stock image', stock_img)
 test_image_components('good quality camera image', good_q_camera)
-test_filtered_image_components('stock image', stock_img)
-test_filtered_image_components('good quality camera image', good_q_camera)
+# test_filtered_image_components('stock image', stock_img)
+# test_filtered_image_components('good quality camera image', good_q_camera)
 

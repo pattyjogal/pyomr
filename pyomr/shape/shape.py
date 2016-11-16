@@ -19,13 +19,14 @@ def get_shapes_from_barline(img):
     horz = copy.copy(img)
     vert = copy.copy(img)
 
-    horz_size, vert_size = horz.shape
+    horz_size, _ = horz.shape
+    _, vert_size = vert.shape
 
     # Start by extracting the horizontal elements
-
+    print(horz_size)
     h_kernel = cv2.getStructuringElement(
         cv2.MORPH_RECT,
-        (30, 1)
+        (int(horz_size / 4.33333), 1)
     )
 
     h_img = cv2.morphologyEx(
@@ -39,7 +40,7 @@ def get_shapes_from_barline(img):
     v_kernel = cv2.getStructuringElement(
         cv2.MORPH_RECT,
         # TODO: Figure out why this has to be super low
-        (1, int(vert_size / 130))
+        (1, 2)
     )
 
     v_img = cv2.morphologyEx(
