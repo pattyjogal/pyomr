@@ -4,10 +4,8 @@ import logging
 
 from pyomr.shape.shape import *
 from pyomr.img.filters import *
+from pyomr.img.transform import *
 
-import matplotlib.pyplot as plt
-from scipy.interpolate import spline, splev, splrep
-from scipy.signal import argrelextrema
 
 dir = os.path.dirname(__file__)
 print(dir)
@@ -20,105 +18,36 @@ mtttp_crump = os.path.join(dir, '../../../img/crumpled.jpg')
 mtttp_vanilla = os.path.join(dir, '../../../img/vanilla.jpg')
 russ = os.path.join(dir, '../../../img/russ.jpg')
 gvb = os.path.join(dir, '../../../img/gvb.jpg')
+etude = os.path.join(dir, '../../../img/etude_slice.jpg')
 
 
 def test_kernel(src, name, numstep):
 
-    cv2.imwrite('output/{}.png'.format(name), locate_notes(src))
+    cv2.imwrite('output/{}.png'.format(name), locate_notes(src)[0])
 
-    img = binary_img(~grayscale(src))
-    oimg = cv2.imread(src, 0)
-    # To get vertical vs horizontal, we need to clone:
-    horz = copy.copy(img)
-    vert = copy.copy(img)
+    # cimg, posns, w, h = locate_clef(src, 'alto')
+    #
+    # cv2.imwrite('clefs.png', cimg)
+    #
+    # for liny in get_clef_ref_note(posns, 'alto', h)[0]:
+    #     print(liny)
+    #     cimg = cv2.line(cimg, (0,liny), (2000,liny), (0,0,255), 1)
+    #
+    # cv2.imwrite('output/clefln_{}.png'.format(name), cimg)
+    # cv2.imshow('Found clefline', cimg)
+    # cv2.waitKey(0)
+    #
+    # img = cv2.imread(src)
 
-    horz_size, _ = horz.shape
-    _, vert_size = vert.shape
+    # cv2.imshow('Transformed', four_point_transform(img, pt_define_quadrangle(img)))
+    # cv2.waitKey(0)
 
-    last_h_img = None
-
-    x_plot = np.array([0])
-    y_plot = np.array([0])
-    dpstep = 0
-    # Start by extracting the horizontal elements
-    for i in range(1, 20):
-        print(horz_size)
-        h_kernel = cv2.getStructuringElement(
-            cv2.MORPH_ELLIPSE,
-            (i, i)
-        )
-
-        h_img = cv2.morphologyEx(
-            img,
-            cv2.MORPH_OPEN,
-            h_kernel
-        )
-
-        # Continue by extracting the vertical elements
-
-        v_kernel = cv2.getStructuringElement(
-            cv2.MORPH_ELLIPSE,
-            # TODO: Figure out why this has to be super low
-            (int(horz_size / 9), 4
-
-             )
-        )
-
-        v_img = cv2.morphologyEx(
-            img,
-            cv2.MORPH_OPEN,
-            v_kernel
-        )
-        dp = 0
-        if last_h_img is not None:
-            dp = (np.count_nonzero(last_h_img)) - (np.count_nonzero(h_img))
-            print('{}: On trial {}, we lost {} px from the last image'.format(name,i, dp))
-        last_h_img = h_img
-
-        cv2.imwrite('kernel/' + name + '_' + str(i) + '_kernel_dp_{}.png'.format(dp), h_img)
-
-        if i is numstep:
-            dpstep = dp
-            good_img = h_img
-            cv2.imwrite('{}_ideal.png'.format(name), ~good_img)
-
-        x_plot = np.append(x_plot, i)
-        y_plot = np.append(y_plot, dp)
-
-    # Try and find a best fit curve
-    x_smooth = np.linspace(x_plot.min(), x_plot.max(), 300)
-    y_smooth = spline(x_plot, y_plot, x_smooth)
-    minm = argrelextrema(y_smooth, np.less)
-    print(minm)
-
-
-    plt.annotate('Accepted point', xy=(numstep, dpstep), xytext=(numstep + 3, dpstep + 100), arrowprops=dict(facecolor='black', shrink=0.05))
-    plt.plot(x_plot, y_plot)
-    plt.plot(x_smooth, y_smooth)
-    plt.suptitle('{}: Loss of Pixels per Step'.format(name), fontsize=14, fontweight='bold')
-    plt.draw()
-    plt.savefig('{}_trend.png'.format(name))
-    plt.clf()
-
-    # Show keypoints
-    pure_img = cv2.imread(src,)
-    img = cv2.medianBlur(~good_img, 3)
-    bimg = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    print('Testing Hough Circles')
-
-    # Detect circles
-    circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 5,
-                               param1=10, param2=10, minRadius=1, maxRadius=20)
-    circles = np.uint16(np.around(circles))
-    for i in circles[0, :]:
-        # draw the outer circle
-        cv2.circle(pure_img, (i[0], i[1]), i[2], (0, 255, 0), 2)
-        # draw the center of the circle
-        cv2.circle(pure_img, (i[0], i[1]), 2, (0, 0, 255), 3)
-    cv2.imwrite('detected_circle_{}.png'.format(name), pure_img)
-    cv2.imshow('detected circles', pure_img)
+    cv2.imshow('Lines', get_barlines(src))
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
+
+
+
+
 
 def test_image_components(message, src):
     logging.info('Testing a ' + message)
@@ -146,7 +75,6 @@ def test_filtered_image_components(message, src):
 
 def test_recognition(lily_notes, desc):
     import subprocess
-    from PIL import Image
 
     lily_string = '{\n'
 
@@ -178,19 +106,21 @@ def test_recognition(lily_notes, desc):
     # test_image_components('generated image', img_path)
 
 
-test_recognition(["b'", "c'", "a'", "g'"], 'small')
-test_recognition(["b'", "c'", "a'", "g'", "e'", "c''", "a'"], 'med')
-test_recognition(["b'", "c'", "a'", "g'", "e'", "c''", "a'"] + ["b'", "c'", "a'", "g'", "e'", "c''", "a'"] + ["b'", "c'", "a'", "g'", "e'", "c''", "a'"], 'large')
-test_kernel(stock_img, 'Scanned Music', 4)
-test_kernel(good_q_camera, 'Uneven Barline Music', 9)
-test_kernel(mild_music, 'PDF', 2)
-test_kernel(mtttp, 'MTTTP On a Computer Screen', 9)
-test_kernel(mtttp_crump, 'Crumpled up MTTTP', 9)
-test_kernel(mtttp_flash, 'Flash Photo of MTTTP', 9)
-test_kernel(mtttp_vanilla, 'Vanilla MTTTP', 9)
-test_kernel(russ, 'Russian', 2)
-test_kernel(gvb, 'Grande Valse Brillante', 3)
+# test_recognition(["b'", "c'", "a'", "g'"], 'small')
+# test_recognition(["b'", "c'", "a'", "g'", "e'", "c''", "a'"], 'med')
+# test_recognition(["b'", "c'", "a'", "g'", "e'", "c''", "a'"] + ["b'", "c'", "a'", "g'", "e'", "c''", "a'"] + ["b'", "c'", "a'", "g'", "e'", "c''", "a'"], 'large')
+# test_kernel(stock_img, 'Scanned Music', 4)
+# test_kernel(good_q_camera, 'Uneven Barline Music', 9)
+# test_kernel(mild_music, 'PDF', 2)
+# test_kernel(mtttp, 'MTTTP On a Computer Screen', 9)
+# test_kernel(mtttp_crump, 'Crumpled up MTTTP', 9)
+# test_kernel(mtttp_flash, 'Flash Photo of MTTTP', 9)
+# test_kernel(mtttp_vanilla, 'Vanilla MTTTP', 9)
+test_kernel(etude, 'Etude', 9)
+# test_kernel(russ, 'Russian', 2)
+# test_kernel(gvb, 'Grande Valse Brillante', 3)
 # test_image_components('stock image', stock_img)
 # test_image_components('good quality camera image', good_q_camera)
 # test_filtered_image_components('stock image', stock_img)
 # test_filtered_image_components('good quality camera image', good_q_camera)
+
